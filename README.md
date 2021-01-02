@@ -1,2 +1,2 @@
 # constconv
-generates Go code with user-defined templates.
+Generate Go code using user-defined templates according to constant definitions.
