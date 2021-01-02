@@ -1,0 +1,10 @@
+{{ $.DoNotEdit }}
+package {{ $.BasePackageName }}
+
+type {{ $.Extra.typename }} string
+
+const (
+{{ range $v := $.Result.Values -}}
+    {{ $.Extra.typename }}{{ $v.Name }} {{ $.Extra.typename }} = "{{ $v.Name | UpperSnakeCase }}"
+{{ end }}
+)

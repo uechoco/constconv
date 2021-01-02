@@ -1,0 +1,10 @@
+{{ $.DoNotEdit }}
+package {{ $.Extra.package }}
+
+type {{ $.Extra.typename }} string
+
+const (
+{{ range $v := $.Result.Values -}}
+    {{ $v.Name | UpperCamelCase }} {{ $.Extra.typename }} = "{{ TrimPrefix (TrimPrefix $v.Name $.Result.RepTypeName) "_" | UpperSnakeCase }}" // {{ $v.Str }}
+{{ end }}
+)

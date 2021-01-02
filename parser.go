@@ -17,7 +17,7 @@ type Parser struct {
 	// These below fields are temporary
 	pkg *Package
 	// These below fields are results of parsing
-	valuesList  [][]Value
+	resultList  []Result
 	basePkgName string
 }
 
@@ -34,26 +34,26 @@ func (p *Parser) Parse() error {
 	}
 
 	p.basePkgName = p.pkg.name
-	p.valuesList = make([][]Value, len(p.c.types))
+	p.resultList = make([]Result, len(p.c.types))
 
 	// inspect each type.
 	for i, typeName := range p.c.types {
-		values, err := p.inspect(typeName)
+		result, err := p.inspect(typeName)
 		if err != nil {
 			return err
 		}
-		p.valuesList[i] = values
+		p.resultList[i] = result
 	}
 
-	if len(p.valuesList) == 0 {
+	if len(p.resultList) == 0 {
 		return fmt.Errorf("no values defined for types %v", p.c.types)
 	}
 
 	return nil
 }
 
-func (p *Parser) ValuesList() [][]Value {
-	return p.valuesList
+func (p *Parser) ResultList() []Result {
+	return p.resultList
 }
 
 func (p *Parser) BasePackageName() string {
@@ -65,11 +65,6 @@ type Package struct {
 	defs    map[*ast.Ident]types.Object
 	imports []*Import
 	files   []*File
-}
-
-type Import struct {
-	name string // import name. e.g. "_", "mathrand"
-	path string // import path. e.g. "\"math/rand\""
 }
 
 type FileRunner struct {
@@ -128,8 +123,10 @@ func (p *Parser) addPackage(pkg *packages.Package) {
 	for i, file := range pkg.Syntax {
 		for _, fileImp := range file.Imports {
 			imp := &Import{
-				name: fileImp.Name.Name,  // "", "_", ".", "mathrand"
-				path: fileImp.Path.Value, // "\"math/rand\""
+				Name:    fileImp.Name.Name,  // "", "_", ".", "mathrand"
+				Path:    fileImp.Path.Value, // "\"math/rand\""
+				Comment: fileImp.Comment.Text(),
+				Doc:     fileImp.Doc.Text(),
 			}
 			p.pkg.imports = append(p.pkg.imports, imp)
 		}
@@ -157,9 +154,9 @@ func (p *Parser) addPackage(pkg *packages.Package) {
 }
 
 // inspect inspects AST for finding the named type and its enumerated values.
-func (p *Parser) inspect(typeName string) ([]Value, error) {
+func (p *Parser) inspect(typeName string) (result Result, err error) {
 	if len(p.pkg.files) == 0 {
-		return nil, errors.New("no files found for inspecting")
+		return result, errors.New("no files found for inspecting")
 	}
 
 	splitted := strings.Split(typeName, ".")
@@ -173,10 +170,16 @@ func (p *Parser) inspect(typeName string) ([]Value, error) {
 		runner.typeName = splitted[1] // e.g. "FileMode" of "os.FileMode"
 		runner.repTypeName = typeName // e.g. "os.FileMode"
 	} else {
-		return nil, fmt.Errorf("unexpected typeName: %s", typeName)
+		return result, fmt.Errorf("unexpected typeName: %s", typeName)
 	}
 
-	values := make([]Value, 0, 10)
+	result = Result{
+		PkgName:     runner.pkgName,
+		TypeName:    runner.typeName,
+		RepTypeName: runner.repTypeName,
+		Values:      make([]Value, 0, 10),
+		Imports:     make([]Import, 0, 10),
+	}
 	for _, file := range p.pkg.files {
 		if runner.pkgName != file.pkg.name {
 			continue
@@ -188,15 +191,20 @@ func (p *Parser) inspect(typeName string) ([]Value, error) {
 		file.runner.ResetForLoop()
 		ast.Inspect(file.file, file.genDecl)
 		if file.runner.HasError() {
-			return nil, fmt.Errorf("inspection failed: %w", file.runner.multiErr)
+			return result, fmt.Errorf("inspection failed: %w", file.runner.multiErr)
 		}
-		values = append(values, runner.values...)
+		result.Values = append(result.Values, runner.values...)
 	}
 
-	if len(values) == 0 {
-		return nil, fmt.Errorf("no values defined for type %s", typeName)
+	if len(result.Values) == 0 {
+		return result, fmt.Errorf("no values defined for type %s", typeName)
 	}
-	return values, nil
+
+	for _, imp := range p.pkg.imports {
+		result.Imports = append(result.Imports, *imp)
+	}
+
+	return result, nil
 }
 
 // genDecl processes one declaration clause.
@@ -243,13 +251,10 @@ func (f *File) genDecl(node ast.Node) bool {
 			}
 			value := obj.(*types.Const).Val() // token.CONST
 			v := Value{
-				Name:        name.Name,
-				PkgName:     f.runner.pkgName,
-				TypeName:    f.runner.typeName,
-				RepTypeName: f.runner.repTypeName,
-				Str:         value.String(),
-				ExactStr:    value.ExactString(),
-				Kind:        value.Kind(),
+				Name:     name.Name,
+				Str:      value.String(),
+				ExactStr: value.ExactString(),
+				Kind:     value.Kind(),
 			}
 			f.runner.values = append(f.runner.values, v)
 		}

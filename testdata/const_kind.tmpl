@@ -1,0 +1,16 @@
+{{ $.DoNotEdit }}
+package {{ $.BasePackageName }}
+
+import(
+{{ range $v := $.Result.Imports -}}
+    {{ $v.Path }}
+{{ end }}
+)
+
+func {{ $.Result.RepTypeName | DropDot | UpperCamelCase }}ToString({{ $.Result.RepTypeName | DropDot | LowerCamelCase }} {{ $.Result.RepTypeName }}) string {
+    switch {{ $.Result.RepTypeName | DropDot | LowerCamelCase }} {
+{{ range $v := $.Result.Values -}}
+        case {{ $v.Str }}: return {{ $v.Name | Quote }}
+{{ end }}
+    }
+}

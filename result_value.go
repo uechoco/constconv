@@ -2,12 +2,23 @@ package main
 
 import "go/constant"
 
-type Value struct {
-	Name        string // The name with trimmed prefix
-	PkgName     string // The specified package name of the constant.
-	TypeName    string // The specified type name of the constant.
-	RepTypeName string // The specified representation of the type name.
+type Result struct {
+	PkgName     string   // The specified package name of the constant.
+	TypeName    string   // The specified type name of the constant.
+	RepTypeName string   // The specified representation of the type name.
+	Values      []Value  // The constant definitions
+	Imports     []Import // The import definitions that defined at parsed package
+}
 
+type Import struct {
+	Name    string // import name. e.g. "_", "mathrand"
+	Path    string // import path. e.g. "\"math/rand\""
+	Comment string
+	Doc     string
+}
+
+type Value struct {
+	Name     string        // The name
 	Str      string        // The string representation given by the "go/constant" package.
 	ExactStr string        // The exact string representation given by the "go/constant" package.
 	Kind     constant.Kind // The kind of constant given by the "go/constant" package.
