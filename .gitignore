@@ -92,6 +92,9 @@ tags
 [._]*.un~
 
 
+### constconv generated file
+*_constconv.go
+
 ### editors
 .vscode
 .idea
