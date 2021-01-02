@@ -25,4 +25,4 @@ const (
 	DayOfWeek_SUNDAY DayOfWeek = 7
 )
 
-// go:generate constconv -type=DayOfWeek -template=dayofweek.tmpl -data="package=dayofweek;typename=DayOfWeek" testdata/dayofweek.go
+//go:generate constconv -type=DayOfWeek -template=dayofweek.tmpl -data=package=dayofweek;typename=DayOfWeek dayofweek.go
